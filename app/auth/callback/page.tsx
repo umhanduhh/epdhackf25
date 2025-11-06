@@ -1,17 +1,15 @@
 "use client"
 
 import { useEffect, useState } from "react"
-import { getSupabaseBrowserClient } from "@/lib/supabase/client"
 import { Loader2 } from "lucide-react"
+import { handleAuthCallback } from "./actions"
 
 export default function AuthCallbackPage() {
   const [status, setStatus] = useState<"loading" | "error">("loading")
 
   useEffect(() => {
-    const handleCallback = async () => {
+    const doCallback = async () => {
       try {
-        const supabase = getSupabaseBrowserClient()
-
         console.log("Full URL:", window.location.href)
         console.log("Hash:", window.location.hash)
 
@@ -19,81 +17,33 @@ export default function AuthCallbackPage() {
         const hashParams = new URLSearchParams(window.location.hash.substring(1))
         const accessToken = hashParams.get('access_token')
         const refreshToken = hashParams.get('refresh_token')
-        const type = hashParams.get('type')
+        const error = hashParams.get('error')
+        const errorCode = hashParams.get('error_code')
 
-        console.log("Extracted tokens:", { accessToken: !!accessToken, refreshToken: !!refreshToken, type })
+        console.log("Extracted tokens:", { accessToken: !!accessToken, refreshToken: !!refreshToken })
 
-        // If we have tokens in the hash, set the session
-        if (accessToken && refreshToken) {
-          console.log("Setting session with tokens...")
-          const { data, error: sessionError } = await supabase.auth.setSession({
-            access_token: accessToken,
-            refresh_token: refreshToken,
-          })
-
-          console.log("Set session result:", { session: !!data.session, error: sessionError })
-
-          if (sessionError) {
-            console.error("Session error:", sessionError)
-            window.location.href = "/auth?error=auth_failed"
+        // Check for errors in hash
+        if (error) {
+          console.error("Auth error from Supabase:", { error, errorCode })
+          if (errorCode === 'otp_expired') {
+            window.location.href = "/auth?error=link_expired"
             return
           }
+          window.location.href = `/auth?error=${errorCode || 'auth_failed'}`
+          return
+        }
 
-          // CRITICAL: Wait for cookies to be written to document.cookie
-          console.log("Waiting for cookies to propagate...")
-          await new Promise(resolve => setTimeout(resolve, 500))
-
-          // Verify cookies were actually written
-          console.log("All cookies:", document.cookie)
-          const cookiesSet = document.cookie.includes('sb-')
-          console.log("Supabase cookies present:", cookiesSet)
-
-          if (!cookiesSet) {
-            console.error("WARNING: Cookies not set properly!")
-          }
+        // If we have tokens, handle them server-side
+        if (accessToken && refreshToken) {
+          console.log("Calling server action to set session...")
+          // Call server action - it will set cookies via HTTP headers and redirect
+          await handleAuthCallback(accessToken, refreshToken)
+          // If we get here, redirect didn't work - shouldn't happen
+          console.error("Server action returned without redirect")
         } else {
           console.error("No tokens found in hash")
           window.location.href = "/auth?error=no_tokens"
-          return
         }
-
-        // Get the current session
-        const {
-          data: { session },
-          error: sessionError,
-        } = await supabase.auth.getSession()
-
-        console.log("Final session check:", { hasSession: !!session, error: sessionError })
-
-        if (sessionError || !session) {
-          console.error("Session error:", sessionError)
-          window.location.href = "/auth?error=auth_failed"
-          return
-        }
-
-        // Check if user has a profile
-        const { data: profile, error: profileError } = await supabase
-          .from("users")
-          .select("id")
-          .eq("id", session.user.id)
-          .single()
-
-        console.log("Profile check result:", { hasProfile: !!profile, error: profileError })
-
-        if (profileError && profileError.code !== "PGRST116") {
-          console.error("Profile check error:", profileError)
-          window.location.href = "/auth?error=auth_failed"
-          return
-        }
-
-        // Final redirect
-        const redirectTo = !profile ? "/profile/setup" : "/feed"
-        console.log("✅ Redirecting to:", redirectTo)
-        console.log("Final cookie state:", document.cookie)
-
-        // Use a longer delay to ensure cookies are fully written
-        await new Promise(resolve => setTimeout(resolve, 1000))
-        window.location.href = redirectTo
       } catch (error) {
         console.error("Callback error:", error)
         setStatus("error")
@@ -103,7 +53,7 @@ export default function AuthCallbackPage() {
       }
     }
 
-    handleCallback()
+    doCallback()
   }, [])
 
   return (
