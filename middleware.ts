@@ -16,18 +16,25 @@ export async function middleware(request: NextRequest) {
       auth: {
         storage: {
           getItem: (key: string) => {
+            console.log(`[Middleware Storage] Attempting to get cookie: ${key}`)
             const cookie = request.cookies.get(key)
+            console.log(`[Middleware Storage] Cookie found: ${!!cookie?.value}`)
+            if (cookie?.value) {
+              console.log(`[Middleware Storage] Cookie value length: ${cookie.value.length}`)
+            }
             return cookie?.value ?? null
           },
           setItem: (key: string, value: string) => {
+            console.log(`[Middleware Storage] Setting cookie: ${key}`)
             response.cookies.set(key, value, {
               path: "/",
               sameSite: "lax",
-              httpOnly: true,
+              httpOnly: false, // MUST be false so client can also read/write
               secure: true,
             })
           },
           removeItem: (key: string) => {
+            console.log(`[Middleware Storage] Removing cookie: ${key}`)
             response.cookies.delete(key)
           },
         },
