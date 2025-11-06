@@ -20,7 +20,7 @@ export default function AuthPage() {
   const [success, setSuccess] = useState(false)
   const [loading, setLoading] = useState(false)
 
-  // NEW: if a session already exists, go to /feed
+  // If a session already exists, go straight to /feed
   useEffect(() => {
     (async () => {
       const supabase = getSupabaseBrowserClient()
@@ -30,7 +30,7 @@ export default function AuthPage() {
         return
       }
 
-      // handle error query only if not logged in
+      // Only show error messages if not logged in
       const params = new URLSearchParams(window.location.search)
       const err = params.get("error")
       if (err === "no_code") setError("Invalid authentication link. Please try again.")
@@ -72,9 +72,14 @@ export default function AuthPage() {
           <CardTitle className="text-3xl font-bold text-[#5a3c2e]">Welcome to GigJourneys</CardTitle>
           <CardDescription className="text-[#8b5b3e]">Enter your email to login or create an account</CardDescription>
         </CardHeader>
+
         <form onSubmit={handleAuth}>
           <CardContent className="space-y-4">
-            {error && <Alert variant="destructive"><AlertDescription>{error}</AlertDescription></Alert>}
+            {error && (
+              <Alert variant="destructive">
+                <AlertDescription>{error}</AlertDescription>
+              </Alert>
+            )}
             {success && (
               <Alert className="border-[#7cc7bb] bg-[#7cc7bb]/20">
                 <Mail className="h-4 w-4 text-[#5a3c2e]" />
@@ -83,6 +88,7 @@ export default function AuthPage() {
                 </AlertDescription>
               </Alert>
             )}
+
             <div className="space-y-2">
               <Label htmlFor="email" className="text-[#5a3c2e]">Email</Label>
               <Input
@@ -97,5 +103,14 @@ export default function AuthPage() {
               />
             </div>
           </CardContent>
+
           <CardFooter>
-            <Button type="submit" className="w-full bg-[#8b5b3e] text-white hover
+            <Button type="submit" className="w-full bg-[#8b5b3e] text-white hover:bg-[#5a3c2e]" disabled={loading}>
+              {loading ? "Sending magic link..." : "Send magic link"}
+            </Button>
+          </CardFooter>
+        </form>
+      </Card>
+    </div>
+  )
+}
