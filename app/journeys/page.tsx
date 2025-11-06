@@ -14,9 +14,9 @@ import { useRouter } from "next/navigation"
 import { Switch } from "@/components/ui/switch"
 
 import useSWR from "swr"
-import { createBrowserClient } from "@supabase/ssr"
+import { getSupabaseBrowserClient } from "@/lib/supabase/client"
 
-const supabase = createBrowserClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!)
+const supabase = getSupabaseBrowserClient()
 
 async function fetchTemplates() {
   const { data } = await supabase.from("journey_templates").select("*").order("created_at", { ascending: true })

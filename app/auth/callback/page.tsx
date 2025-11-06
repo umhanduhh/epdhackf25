@@ -12,10 +12,20 @@ export default function AuthCallbackPage() {
       try {
         const supabase = getSupabaseBrowserClient()
 
-        // Wait for Supabase to automatically handle the code exchange
-        await new Promise((resolve) => setTimeout(resolve, 2000))
+        // Get the code from the URL
+        const code = new URL(window.location.href).searchParams.get("code")
 
-        // Get the session after automatic code exchange
+        if (code) {
+          // Exchange the code for a session
+          const { error: exchangeError } = await supabase.auth.exchangeCodeForSession(code)
+          if (exchangeError) {
+            console.error("Code exchange error:", exchangeError)
+            window.location.href = "/auth?error=auth_failed"
+            return
+          }
+        }
+
+        // Get the session after code exchange
         const {
           data: { session },
           error: sessionError,
