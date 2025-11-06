@@ -1,5 +1,5 @@
 import { type NextRequest, NextResponse } from "next/server"
-import { createServerClient } from "@supabase/ssr"
+import { createClient } from "@supabase/supabase-js"
 
 export async function middleware(request: NextRequest) {
   let response = NextResponse.next({
@@ -8,30 +8,34 @@ export async function middleware(request: NextRequest) {
     },
   })
 
-  const supabase = createServerClient(
+  // Create Supabase client with custom cookie storage for middleware
+  const supabase = createClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
     {
-      cookies: {
-        get(name: string) {
-          return request.cookies.get(name)?.value
+      auth: {
+        storage: {
+          getItem: (key: string) => {
+            const cookie = request.cookies.get(key)
+            return cookie?.value ?? null
+          },
+          setItem: (key: string, value: string) => {
+            response.cookies.set(key, value, {
+              path: "/",
+              sameSite: "lax",
+              httpOnly: true,
+              secure: true,
+            })
+          },
+          removeItem: (key: string) => {
+            response.cookies.delete(key)
+          },
         },
-        set(name: string, value: string, options: any) {
-          response.cookies.set({
-            name,
-            value,
-            ...options,
-          })
-        },
-        remove(name: string, options: any) {
-          response.cookies.set({
-            name,
-            value: "",
-            ...options,
-          })
-        },
+        autoRefreshToken: false,
+        persistSession: false,
+        detectSessionInUrl: false,
       },
-    },
+    }
   )
 
   // Allow auth callback to proceed without checks
