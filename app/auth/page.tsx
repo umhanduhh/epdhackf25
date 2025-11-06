@@ -1,6 +1,8 @@
 "use client"
+export const dynamic = "force-dynamic";
 
 import { useEffect, useState } from "react"
+import { useRouter } from "next/navigation"
 import { getSupabaseBrowserClient } from "@/lib/supabase/client"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -11,18 +13,30 @@ import { Mail } from "lucide-react"
 import Image from "next/image"
 
 export default function AuthPage() {
+  const router = useRouter()
   const [email, setEmail] = useState("")
   const [error, setError] = useState("")
   const [success, setSuccess] = useState(false)
   const [loading, setLoading] = useState(false)
 
+  // If a session already exists, go straight to /feed
   useEffect(() => {
-    const params = new URLSearchParams(window.location.search)
-    const errorParam = params.get("error")
-    if (errorParam === "no_code") setError("Invalid authentication link. Please try again.")
-    if (errorParam === "auth_failed") setError("Authentication failed. Please try again.")
-    if (errorParam === "no_user") setError("Could not authenticate user. Please try again.")
-  }, [])
+    (async () => {
+      const supabase = getSupabaseBrowserClient()
+      const { data: { session } } = await supabase.auth.getSession()
+      if (session) {
+        router.replace("/feed")
+        return
+      }
+
+      // Only show error messages if not logged in
+      const params = new URLSearchParams(window.location.search)
+      const err = params.get("error")
+      if (err === "no_code") setError("Invalid authentication link. Please try again.")
+      if (err === "auth_failed") setError("Authentication failed. Please try again.")
+      if (err === "no_user") setError("Could not authenticate user. Please try again.")
+    })()
+  }, [router])
 
   const handleAuth = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -32,7 +46,6 @@ export default function AuthPage() {
 
     try {
       const supabase = getSupabaseBrowserClient()
-      // ✅ Force same-origin; prevents PKCE 400s
       const redirectUrl = `${window.location.origin}/auth/callback`
 
       const { error } = await supabase.auth.signInWithOtp({
