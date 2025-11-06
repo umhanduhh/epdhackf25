@@ -12,10 +12,27 @@ export default function AuthCallbackPage() {
       try {
         const supabase = getSupabaseBrowserClient()
 
-        // Wait for Supabase to automatically handle the code exchange
-        await new Promise((resolve) => setTimeout(resolve, 2000))
+        // Extract token from URL hash (magic link tokens are in hash)
+        const hashParams = new URLSearchParams(window.location.hash.substring(1))
+        const accessToken = hashParams.get('access_token')
+        const refreshToken = hashParams.get('refresh_token')
+        const type = hashParams.get('type')
 
-        // Get the session after automatic code exchange
+        // If we have tokens in the hash, set the session
+        if (accessToken && refreshToken && type === 'magiclink') {
+          const { error: sessionError } = await supabase.auth.setSession({
+            access_token: accessToken,
+            refresh_token: refreshToken,
+          })
+
+          if (sessionError) {
+            console.error("Session error:", sessionError)
+            window.location.href = "/auth?error=auth_failed"
+            return
+          }
+        }
+
+        // Get the current session
         const {
           data: { session },
           error: sessionError,
