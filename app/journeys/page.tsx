@@ -16,15 +16,18 @@ import { Switch } from "@/components/ui/switch"
 import useSWR from "swr"
 import { getSupabaseBrowserClient } from "@/lib/supabase/client"
 
-async function fetchTemplates() {
-  const supabase = getSupabaseBrowserClient()
-  const { data } = await supabase.from("journey_templates").select("*").order("created_at", { ascending: true })
-  return data || []
-}
-
 export default function JourneysPage() {
   const router = useRouter()
-  const { data: templates } = useSWR("journey_templates", fetchTemplates)
+
+  // Fetcher runs client-side only
+  const { data: templates } = useSWR(
+    typeof window !== "undefined" ? "journey_templates" : null,
+    async () => {
+      const supabase = getSupabaseBrowserClient()
+      const { data } = await supabase.from("journey_templates").select("*").order("created_at", { ascending: true })
+      return data || []
+    }
+  )
   const [selectedTemplate, setSelectedTemplate] = useState<any>(null)
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [isPublic, setIsPublic] = useState(true)
