@@ -49,18 +49,27 @@ export async function middleware(request: NextRequest) {
     return response
   }
 
+  // Log all cookies received by middleware
+  const allCookies = request.cookies.getAll()
+  console.log(`[Middleware] Path: ${request.nextUrl.pathname}`)
+  console.log(`[Middleware] Cookies received:`, allCookies.map(c => c.name))
+
   // Refresh session
   const {
     data: { user },
   } = await supabase.auth.getUser()
 
+  console.log(`[Middleware] User authenticated:`, !!user)
+
   // Redirect authenticated users away from auth page
   if (user && request.nextUrl.pathname === "/auth") {
+    console.log(`[Middleware] Redirecting authenticated user from /auth to /feed`)
     return NextResponse.redirect(new URL("/feed", request.url))
   }
 
   // Redirect unauthenticated users to auth page for protected routes
   if (!user && request.nextUrl.pathname !== "/auth" && request.nextUrl.pathname !== "/") {
+    console.log(`[Middleware] Redirecting unauthenticated user to /auth`)
     return NextResponse.redirect(new URL("/auth", request.url))
   }
 

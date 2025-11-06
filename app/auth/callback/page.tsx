@@ -38,6 +38,19 @@ export default function AuthCallbackPage() {
             window.location.href = "/auth?error=auth_failed"
             return
           }
+
+          // CRITICAL: Wait for cookies to be written to document.cookie
+          console.log("Waiting for cookies to propagate...")
+          await new Promise(resolve => setTimeout(resolve, 500))
+
+          // Verify cookies were actually written
+          console.log("All cookies:", document.cookie)
+          const cookiesSet = document.cookie.includes('sb-')
+          console.log("Supabase cookies present:", cookiesSet)
+
+          if (!cookiesSet) {
+            console.error("WARNING: Cookies not set properly!")
+          }
         } else {
           console.error("No tokens found in hash")
           window.location.href = "/auth?error=no_tokens"
@@ -65,18 +78,22 @@ export default function AuthCallbackPage() {
           .eq("id", session.user.id)
           .single()
 
+        console.log("Profile check result:", { hasProfile: !!profile, error: profileError })
+
         if (profileError && profileError.code !== "PGRST116") {
           console.error("Profile check error:", profileError)
           window.location.href = "/auth?error=auth_failed"
           return
         }
 
-        // Redirect based on profile existence
-        if (!profile) {
-          window.location.href = "/profile/setup"
-        } else {
-          window.location.href = "/feed"
-        }
+        // Final redirect
+        const redirectTo = !profile ? "/profile/setup" : "/feed"
+        console.log("✅ Redirecting to:", redirectTo)
+        console.log("Final cookie state:", document.cookie)
+
+        // Use a longer delay to ensure cookies are fully written
+        await new Promise(resolve => setTimeout(resolve, 1000))
+        window.location.href = redirectTo
       } catch (error) {
         console.error("Callback error:", error)
         setStatus("error")
