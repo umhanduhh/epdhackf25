@@ -13,7 +13,7 @@ import { Textarea } from "@/components/ui/textarea"
 import { Compass, Sparkles, Trophy, TrendingUp } from "lucide-react"
 import { BottomNav } from "@/components/bottom-nav"
 import { updateJourneyProgress } from "./actions"
-import { getSupabaseBrowserClient } from "@/lib/supabase/client"
+import { createBrowserClient } from "@supabase/ssr"
 
 interface Journey {
   id: string
@@ -35,9 +35,13 @@ export default function MyJourneysPage() {
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
 
+  const supabase = createBrowserClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+  )
+
   useEffect(() => {
     async function loadJourneys() {
-      const supabase = getSupabaseBrowserClient()
       const {
         data: { user },
       } = await supabase.auth.getUser()
@@ -60,7 +64,7 @@ export default function MyJourneysPage() {
     }
 
     loadJourneys()
-  }, [router])
+  }, [router, supabase])
 
   const activeJourneys = journeys.filter((j) => !j.completed_at)
   const completedJourneys = journeys.filter((j) => j.completed_at)
@@ -83,7 +87,6 @@ export default function MyJourneysPage() {
       setIsModalOpen(false)
       setSelectedJourney(null)
       // Reload journeys
-      const supabase = getSupabaseBrowserClient()
       const { data } = await supabase
         .from("journeys")
         .select(`
