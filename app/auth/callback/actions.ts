@@ -1,17 +1,10 @@
 "use server"
 
 import { cookies } from "next/headers"
-import { createClient } from "@supabase/supabase-js"
 import { redirect } from "next/navigation"
 
 export async function handleAuthCallback(accessToken: string, refreshToken: string) {
   const cookieStore = cookies()
-
-  // Create server-side Supabase client - let it use default storage since we'll set cookies manually
-  const supabase = createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-  )
 
   // Get user info from the access token by calling Supabase auth API
   const userResponse = await fetch(`${process.env.NEXT_PUBLIC_SUPABASE_URL}/auth/v1/user`, {
