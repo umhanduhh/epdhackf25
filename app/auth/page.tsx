@@ -1,4 +1,4 @@
-"use client"
+]"use client"
 
 import { useEffect, useState } from "react"
 import { getSupabaseBrowserClient } from "@/lib/supabase/client"
@@ -32,14 +32,12 @@ export default function AuthPage() {
 
     try {
       const supabase = getSupabaseBrowserClient()
-      const redirectUrl =
-        process.env.NEXT_PUBLIC_APP_URL
-          ? `${process.env.NEXT_PUBLIC_APP_URL}/auth/callback`
-          : `${window.location.origin}/auth/callback`
+      // ✅ Force same-origin; prevents PKCE 400s
+      const redirectUrl = `${window.location.origin}/auth/callback`
 
       const { error } = await supabase.auth.signInWithOtp({
         email,
-        options: { emailRedirectTo: redirectUrl },
+        options: { emailRedirectTo: redirectUrl, shouldCreateUser: true },
       })
       if (error) throw error
 
